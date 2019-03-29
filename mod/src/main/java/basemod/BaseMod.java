@@ -65,6 +65,8 @@ import com.megacrit.cardcrawl.rooms.AbstractRoom;
 import com.megacrit.cardcrawl.screens.charSelect.CharacterOption;
 import com.megacrit.cardcrawl.screens.custom.CustomMod;
 import com.megacrit.cardcrawl.screens.custom.CustomModeCharacterButton;
+import com.megacrit.cardcrawl.screens.stats.AchievementGrid;
+import com.megacrit.cardcrawl.screens.stats.AchievementItem;
 import com.megacrit.cardcrawl.shop.ShopScreen;
 import com.megacrit.cardcrawl.shop.StorePotion;
 import com.megacrit.cardcrawl.shop.StoreRelic;
@@ -154,6 +156,7 @@ public class BaseMod {
 	private static ArrayList<PreRoomRenderSubscriber> preRoomRenderSubscribers;
 	private static ArrayList<OnPlayerLoseBlockSubscriber> onPlayerLoseBlockSubscribers;
 	private static ArrayList<OnPlayerDamagedSubscriber> onPlayerDamagedSubscribers;
+	private static ArrayList<EditAchievementsSubscriber> editAchievementsSubscribers;
 	private static ArrayList<OnCreateDescriptionSubscriber> onCreateDescriptionSubscribers;
 
 	private static ArrayList<AbstractCard> redToAdd;
@@ -241,6 +244,8 @@ public class BaseMod {
 	private static HashMap<AbstractPlayer.PlayerClass, Integer> maxUnlockLevel;
 
 	private static HashMap<String, CustomSavableRaw> customSaveFields = new HashMap<>();
+
+	private static Set<String> modAchievements = new HashSet<>();
 
 	private static OrthographicCamera animationCamera;
 	private static ModelBatch batch;
@@ -480,6 +485,7 @@ public class BaseMod {
 		onPlayerLoseBlockSubscribers = new ArrayList<>();
 		onPlayerDamagedSubscribers = new ArrayList<>();
 		onCreateDescriptionSubscribers = new ArrayList<>();
+		editAchievementsSubscribers = new ArrayList<>();
 	}
 
 	// initializeCardLists -
@@ -1653,6 +1659,25 @@ public class BaseMod {
 	}
 
 	//
+	// Achievements
+	//
+
+	private static AchievementGrid tempAchievementGrid = null;
+
+	public static void addAchievement(AchievementItem achievement) {
+		if (tempAchievementGrid == null) {
+			throw new RuntimeException("addAchievement MUST be called in receiveEditAchievements()");
+		}
+
+		modAchievements.add(achievement.key);
+		tempAchievementGrid.items.add(achievement);
+	}
+
+	public static boolean isModdedAchievement(String key) {
+		return modAchievements.contains(key);
+	}
+
+	//
 	// Characters
 	//
 
@@ -2506,6 +2531,20 @@ public class BaseMod {
 		unsubscribeLaterHelper(EditStringsSubscriber.class);
 	}
 
+	// publishEditAchievements -
+	public static void publishEditAchievements(AchievementGrid achievementGrid) {
+		logger.info("begin editing achievements");
+
+		tempAchievementGrid = achievementGrid;
+
+		for (EditAchievementsSubscriber sub : editAchievementsSubscribers) {
+			sub.receiveEditAchievements();
+		}
+
+		tempAchievementGrid = null;
+		unsubscribeLaterHelper(EditAchievementsSubscriber.class);
+	}
+
 	// publishAddAudio -
 	public static void publishAddAudio(SoundMaster __instance) {
 		logger.info("begin adding custom sounds");
@@ -2805,6 +2844,7 @@ public class BaseMod {
 		subscribeIfInstance(onPlayerLoseBlockSubscribers, sub, OnPlayerLoseBlockSubscriber.class);
 		subscribeIfInstance(onPlayerDamagedSubscribers, sub, OnPlayerDamagedSubscriber.class);
 		subscribeIfInstance(onCreateDescriptionSubscribers, sub, OnCreateDescriptionSubscriber.class);
+		subscribeIfInstance(editAchievementsSubscribers, sub, EditAchievementsSubscriber.class);
 	}
 
 	// subscribe -
@@ -2902,6 +2942,8 @@ public class BaseMod {
 			onPlayerDamagedSubscribers.add((OnPlayerDamagedSubscriber) sub);
 		} else if (additionClass.equals(OnCreateDescriptionSubscriber.class)) {
 			onCreateDescriptionSubscribers.add((OnCreateDescriptionSubscriber) sub);
+		} else if (additionClass.equals(EditAchievementsSubscriber.class)) {
+			editAchievementsSubscribers.add((EditAchievementsSubscriber) sub);
 		}
 	}
 
@@ -2954,6 +2996,7 @@ public class BaseMod {
 		unsubscribeIfInstance(onPlayerLoseBlockSubscribers, sub, OnPlayerLoseBlockSubscriber.class);
 		unsubscribeIfInstance(onPlayerDamagedSubscribers, sub, OnPlayerDamagedSubscriber.class);
 		unsubscribeIfInstance(onCreateDescriptionSubscribers, sub, OnCreateDescriptionSubscriber.class);
+		unsubscribeIfInstance(editAchievementsSubscribers, sub, EditAchievementsSubscriber.class);
 	}
 
 	// unsubscribe -
@@ -3053,6 +3096,8 @@ public class BaseMod {
 			onPlayerDamagedSubscribers.remove(sub);
 		} else if (removalClass.equals(OnCreateDescriptionSubscriber.class)) {
 			onCreateDescriptionSubscribers.remove(sub);
+		} else if (removalClass.equals(EditAchievementsSubscriber.class)) {
+			editAchievementsSubscribers.remove(sub);
 		}
 	}
 
