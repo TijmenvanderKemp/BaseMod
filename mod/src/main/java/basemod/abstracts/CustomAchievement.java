@@ -3,6 +3,7 @@ package basemod.abstracts;
 import basemod.ReflectionHacks;
 import basemod.helpers.AchievementJSON;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.megacrit.cardcrawl.helpers.ImageMaster;
 import com.megacrit.cardcrawl.screens.stats.AchievementItem;
 
@@ -25,8 +26,12 @@ public class CustomAchievement extends AchievementItem
 			tempImg = ImageMaster.loadImage(imgUrlLocked);
 		}
 		if (tempImg != null) {
-			ReflectionHacks.setPrivate(this, AchievementItem.class, "img", tempImg);
+			ReflectionHacks.setPrivate(this, AchievementItem.class, "img", createAtlasRegion(tempImg));
 		}
+	}
+
+	private TextureAtlas.AtlasRegion createAtlasRegion(Texture tempImg) {
+		return new TextureAtlas.AtlasRegion(tempImg, 0, 0, tempImg.getWidth(), tempImg.getHeight());
 	}
 
 	public CustomAchievement(String key, String title, String desc, String imgUrl, String imgUrlLocked)
