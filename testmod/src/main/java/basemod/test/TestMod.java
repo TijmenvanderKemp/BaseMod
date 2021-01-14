@@ -3,8 +3,11 @@ package basemod.test;
 import basemod.BaseMod;
 import basemod.ModLabel;
 import basemod.ModPanel;
+import basemod.abstracts.CustomAchievement;
 import basemod.abstracts.CustomSavable;
+import basemod.helpers.AchievementJSON;
 import basemod.interfaces.*;
+import basemod.test.achievements.StrikeAchievement;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -23,6 +26,7 @@ import com.megacrit.cardcrawl.localization.CardStrings;
 import com.megacrit.cardcrawl.localization.RelicStrings;
 import com.megacrit.cardcrawl.monsters.AbstractMonster;
 import com.megacrit.cardcrawl.relics.AbstractRelic;
+import com.megacrit.cardcrawl.screens.stats.AchievementItem;
 import com.megacrit.cardcrawl.shop.ShopScreen;
 import com.megacrit.cardcrawl.shop.StorePotion;
 import com.megacrit.cardcrawl.shop.StoreRelic;
@@ -46,7 +50,7 @@ public class TestMod implements
 	PostInitializeSubscriber, PostRenderSubscriber, PostUpdateSubscriber,
 	PreMonsterTurnSubscriber, PreStartGameSubscriber,
 	PreUpdateSubscriber, RenderSubscriber, StartActSubscriber,
-	StartGameSubscriber {
+	StartGameSubscriber, EditAchievementsSubscriber {
 	public static final Logger logger = LogManager.getLogger(TestMod.class.getName());
 	
 	private static final String LOG_FILE = "testmod.log";
@@ -443,5 +447,10 @@ public class TestMod implements
 				}
 			}
 		});
+	}
+
+	@Override
+	public void receiveEditAchievements() {
+		BaseMod.addAchievement(new StrikeAchievement());
 	}
 }

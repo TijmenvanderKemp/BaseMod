@@ -1,0 +1,7 @@
+{
+  "NAME": "STRIKE!",
+  "TEXT": "You played a strike",
+  "IMG": "achievements/achievement-1.png",
+  "IMG_LOCKED": "achievements/achievement-1-locked.png",
+  "TEXT_IMG": "achievements/achievement-1-text.png"
+}

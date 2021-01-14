@@ -1,6 +1,7 @@
 package basemod.test;
 
 import basemod.abstracts.CustomCard;
+import basemod.test.achievements.StrikeAchievement;
 import com.megacrit.cardcrawl.actions.AbstractGameAction;
 import com.megacrit.cardcrawl.cards.AbstractCard;
 import com.megacrit.cardcrawl.cards.DamageInfo;
@@ -8,6 +9,7 @@ import com.megacrit.cardcrawl.core.CardCrawlGame;
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon;
 import com.megacrit.cardcrawl.localization.CardStrings;
 import com.megacrit.cardcrawl.monsters.AbstractMonster;
+import com.megacrit.cardcrawl.unlock.UnlockTracker;
 
 public class Strike_Purple extends CustomCard {
 	public static final String ID = "Strike_P";
@@ -27,6 +29,7 @@ public class Strike_Purple extends CustomCard {
 	}
 
 	public void use(com.megacrit.cardcrawl.characters.AbstractPlayer p, AbstractMonster m) {
+		UnlockTracker.unlockAchievement(StrikeAchievement.ID);
 		if (com.megacrit.cardcrawl.core.Settings.isDebug) {
 			if (com.megacrit.cardcrawl.core.Settings.isInfo) {
 				this.multiDamage = new int[AbstractDungeon.getCurrRoom().monsters.monsters.size()];

@@ -66,6 +66,7 @@
                             <target>
                                 <copy file="target/${artifactId}.jar" tofile="../../_ModTheSpire/mods/${artifactId}.jar"/>
                                 <copy file="target/${artifactId}.jar" tofile="../../lib/${artifactId}.jar"/>
+                                <copy file="target/${artifactId}.jar" tofile="/Users/t.vanderkemp/Library/Application Support/Steam/steamapps/workshop/content/646570/1605833019/BaseMod.jar"/>
                             </target>
                         </configuration>
                         <goals>
