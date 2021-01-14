@@ -3,6 +3,8 @@ package basemod;
 import basemod.abstracts.*;
 import basemod.eventUtil.AddEventParams;
 import basemod.eventUtil.EventUtils;
+import basemod.helpers.CustomAchievementRenderer;
+import basemod.helpers.CustomAchievementUnlocker;
 import basemod.helpers.RelicType;
 import basemod.helpers.dynamicvariables.BlockVariable;
 import basemod.helpers.dynamicvariables.DamageVariable;
@@ -260,6 +262,7 @@ public class BaseMod {
 	public static final String save_path = "saves" + File.separator;
 
 	public static DevConsole console;
+	public static CustomAchievementRenderer customAchievementRenderer;
 	public static Gson gson;
 	public static boolean modSettingsUp = false;
 
@@ -387,6 +390,7 @@ public class BaseMod {
 		config = makeConfig();
 		setProperties();
 		console = new DevConsole();
+		customAchievementRenderer = new CustomAchievementRenderer();
 	}
 
 	// setupAnimationGfx -
@@ -1671,6 +1675,7 @@ public class BaseMod {
 
 		modAchievements.add(achievement.key);
 		tempAchievementGrid.items.add(achievement);
+		CustomAchievementUnlocker.register(achievement);
 	}
 
 	public static boolean isModdedAchievement(String key) {
