@@ -4,6 +4,7 @@ import basemod.BaseMod;
 import basemod.ReflectionHacks;
 import basemod.interfaces.PostRenderSubscriber;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -14,9 +15,11 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.utils.Disposable;
+import com.megacrit.cardcrawl.core.CardCrawlGame;
 import com.megacrit.cardcrawl.core.Settings;
 import com.megacrit.cardcrawl.helpers.FontHelper;
 import com.megacrit.cardcrawl.helpers.ImageMaster;
+import com.megacrit.cardcrawl.localization.UIStrings;
 import com.megacrit.cardcrawl.screens.stats.AchievementItem;
 import com.megacrit.cardcrawl.vfx.AbstractGameEffect;
 import org.apache.logging.log4j.LogManager;
@@ -34,10 +37,10 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
   private static final float BADGE_LEFT_OFFSET = 14;
   private static final int BADGE_WIDTH = 64;
   private static final int BADGE_HEIGHT = 64;
-  private static final float TEXT_TOP_OFFSET = 54;
+  private static final float TEXT_TOP_OFFSET = 27;
   private static final float TEXT_LEFT_OFFSET = 88;
   private static final float TEXT_WIDTH = POPUP_WIDTH - TEXT_LEFT_OFFSET;
-  private static final int TEXT_HEIGHT = 12;
+  private static final int TEXT_HEIGHT = 40;
   private static final Logger LOGGER = LogManager.getLogger(CustomAchievementRenderer.class);
 
   private static final List<GameEffectAndDisposable> achievementsToRenderWithAssociatedDisposable = new ArrayList<>();
@@ -85,11 +88,16 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
 
     queuePopupForRendering();
     queueBadgeForRendering(achievement);
-    queueTitleForRendering(achievement);
+    queueTextForRendering(achievement);
   }
 
   private static void initializeFont() {
-    font = FontHelper.cardTypeFont;
+    // Loading a custom font does not work because of FreeType error code 2 (this probably means wrong file type)
+    // So I'm using the font that's included with the base game that looks the most like the Steam achievement font
+    // which is Helvetica Regular I believe.
+    FileHandle fileHandle = Gdx.files.internal("font/gre/Roboto-Regular.ttf");
+    ReflectionHacks.setPrivateStatic(FontHelper.class, "fontFile", fileHandle);
+    font = FontHelper.prepFont(12.5f, true);
   }
 
   private static void queuePopupForRendering() {
@@ -131,14 +139,17 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
     }
   }
 
-  private static void queueTitleForRendering(AchievementItem achievement) {
+  private static void queueTextForRendering(AchievementItem achievement) {
+    UIStrings uiStrings = CardCrawlGame.languagePack.getUIString("AchievementUnlocked");
     String title = ReflectionHacks.getPrivate(achievement, AchievementItem.class, "title");
+    String text = uiStrings.TEXT[0] + " NL NL " + title;
 
     FrameBuffer fb = createFrameBuffer((int) TEXT_WIDTH, TEXT_HEIGHT);
     beginSpriteBatch(myTitleSpriteBatch, (int) TEXT_WIDTH, TEXT_HEIGHT);
     // TODO TK: For some weird reason, the y is TEXT_HEIGHT more than I would expect to have to use. I would expect to
     //  use -TEXT_HEIGHT/2, like the badge above, but then the text disappears.
-    FontHelper.renderFont(myTitleSpriteBatch, font, title, -TEXT_WIDTH / 2, TEXT_HEIGHT / 2f, new Color(0xCCCCCCFF));
+    FontHelper.renderSmartText(myTitleSpriteBatch, font, text, -TEXT_WIDTH / 2, TEXT_HEIGHT / 2f, TEXT_WIDTH,
+        font.getLineHeight() * 1.2f, new Color(0xCCCCCCFF));
     myTitleSpriteBatch.end();
     fb.end();
 
