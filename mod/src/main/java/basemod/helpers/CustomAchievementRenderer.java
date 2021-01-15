@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
+import com.badlogic.gdx.utils.Disposable;
 import com.megacrit.cardcrawl.core.Settings;
 import com.megacrit.cardcrawl.helpers.FontHelper;
 import com.megacrit.cardcrawl.helpers.ImageMaster;
@@ -40,9 +41,20 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
   private static final int TEXT_HEIGHT = 12;
   private static final Logger LOGGER = LogManager.getLogger(CustomAchievementRenderer.class);
 
-  private static List<AbstractGameEffect> achievementsToRender = new ArrayList<>();
+  private static List<GameEffectAndDisposable> achievementsToRenderWithAssociatedDisposable = new ArrayList<>();
 
-  private static SpriteBatch mySpriteBatch;
+  private static class GameEffectAndDisposable {
+    private AbstractGameEffect gameEffect;
+    private Disposable disposable;
+
+    public GameEffectAndDisposable(AbstractGameEffect gameEffect, Disposable disposable) {
+      this.gameEffect = gameEffect;
+      this.disposable = disposable;
+    }
+  }
+
+  private static SpriteBatch myBadgeSpriteBatch;
+  private static SpriteBatch myTitleSpriteBatch;
   private static BitmapFont font;
 
   public CustomAchievementRenderer() {
@@ -51,17 +63,25 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
 
   @Override
   public void receivePostRender(SpriteBatch sb) {
-    achievementsToRender.forEach(it -> it.render(sb));
-    achievementsToRender.forEach(AbstractGameEffect::update);
-    achievementsToRender.removeIf(it -> it.isDone);
+    for (GameEffectAndDisposable gameEffectAndDisposable : achievementsToRenderWithAssociatedDisposable) {
+      gameEffectAndDisposable.gameEffect.render(sb);
+      gameEffectAndDisposable.gameEffect.update();
+      if (gameEffectAndDisposable.gameEffect.isDone) {
+        gameEffectAndDisposable.disposable.dispose();
+      }
+    }
+    achievementsToRenderWithAssociatedDisposable.removeIf(it -> it.gameEffect.isDone);
   }
 
   public static void addAchievementToRenderQueue(AchievementItem achievement) {
     if (font == null) {
       initializeFont();
     }
-    if (mySpriteBatch == null) {
-      mySpriteBatch = new SpriteBatch();
+    if (myBadgeSpriteBatch == null) {
+      myBadgeSpriteBatch = new SpriteBatch();
+    }
+    if (myTitleSpriteBatch == null) {
+      myTitleSpriteBatch = new SpriteBatch();
     }
 
     queuePopupForRendering();
@@ -75,7 +95,12 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
 
   private static void queuePopupForRendering() {
     Texture achievementPopup = ImageMaster.loadImage("img/achievements/achievementpopup.png");
-    achievementsToRender.add(getAchievementPopupElement(achievementPopup, 0, 0));
+    achievementsToRenderWithAssociatedDisposable.add(
+        new GameEffectAndDisposable(
+            getAchievementPopupElement(achievementPopup, 0, 0),
+            achievementPopup
+        )
+    );
   }
 
   private static void queueBadgeForRendering(AchievementItem achievement) {
@@ -86,11 +111,17 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
 
       FrameBuffer fb = createFrameBuffer(BADGE_WIDTH, BADGE_HEIGHT);
       onFrameBuffer(fb, frameBuffer ->
-          onSpriteBatch(mySpriteBatch, BADGE_WIDTH, BADGE_HEIGHT, sb ->
+          onSpriteBatch(myBadgeSpriteBatch, BADGE_WIDTH, BADGE_HEIGHT, sb ->
               sb.draw(achievementBadge, -BADGE_WIDTH / 2f, -BADGE_HEIGHT / 2f, BADGE_WIDTH, BADGE_HEIGHT)));
 
-      achievementsToRender.add(
-          getAchievementPopupElement(getTextureFromFrameBuffer(fb), BADGE_LEFT_OFFSET, BADGE_TOP_OFFSET));
+      achievementBadge.flip(false, true);
+
+      achievementsToRenderWithAssociatedDisposable.add(
+          new GameEffectAndDisposable(
+              getAchievementPopupElement(getTextureFromFrameBuffer(fb), BADGE_LEFT_OFFSET, BADGE_TOP_OFFSET),
+              fb
+          )
+      );
     }
     else {
       LOGGER.error("Achievement icon not found of achievement %s", achievement.key);
@@ -102,13 +133,16 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
 
     FrameBuffer fb = createFrameBuffer((int) (POPUP_WIDTH - TEXT_LEFT_OFFSET), TEXT_HEIGHT);
     onFrameBuffer(fb, frameBuffer ->
-        onSpriteBatch(mySpriteBatch, (int) (POPUP_WIDTH - TEXT_LEFT_OFFSET), TEXT_HEIGHT, sb ->
+        onSpriteBatch(myTitleSpriteBatch, (int) (POPUP_WIDTH - TEXT_LEFT_OFFSET), TEXT_HEIGHT, sb ->
 //            FontHelper.renderFont(mySpriteBatch, font, title, -(POPUP_WIDTH - TEXT_LEFT_OFFSET) / 2, -TEXT_HEIGHT / 2f,
-            FontHelper.renderFont(mySpriteBatch, font, title, 0, 0,
-                Color.RED)));
+            FontHelper.renderFont(sb, font, title, -100, 0, Color.RED)));
 
-    achievementsToRender.add(
-        getAchievementPopupElement(getTextureFromFrameBuffer(fb), TEXT_LEFT_OFFSET, TEXT_TOP_OFFSET));
+    achievementsToRenderWithAssociatedDisposable.add(
+        new GameEffectAndDisposable(
+            getAchievementPopupElement(getTextureFromFrameBuffer(fb), TEXT_LEFT_OFFSET, TEXT_TOP_OFFSET),
+            fb
+        )
+    );
   }
 
   private static FrameBuffer createFrameBuffer(int width, int height) {
@@ -124,17 +158,17 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
     fb.end();
   }
 
-  private static void onSpriteBatch(SpriteBatch sb, int viewportWidth, int viewportHeight,
-      Consumer<SpriteBatch> block) {
+  private static void onSpriteBatch(SpriteBatch sb, int viewportWidth, int viewportHeight, Consumer<SpriteBatch> block) {
     OrthographicCamera og = new OrthographicCamera(viewportWidth, viewportHeight);
-    mySpriteBatch.setProjectionMatrix(og.combined);
-    mySpriteBatch.begin();
+    sb.setProjectionMatrix(og.combined);
+    sb.begin();
     block.accept(sb);
-    mySpriteBatch.end();
+    sb.end();
   }
 
   private static Texture getTextureFromFrameBuffer(FrameBuffer fb) {
     TextureRegion textureRegion = new TextureRegion(fb.getColorBufferTexture(), 0, 0);
+    textureRegion.flip(false, true);
     return textureRegion.getTexture();
   }
 
