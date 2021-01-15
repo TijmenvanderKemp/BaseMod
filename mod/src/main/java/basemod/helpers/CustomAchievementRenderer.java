@@ -10,7 +10,6 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -25,14 +24,20 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class CustomAchievementRenderer implements PostRenderSubscriber {
   private static final float MOVE_DURATION = .7f;
   private static final float SHOW_DURATION = 6f;
+  private static final float POPUP_WIDTH = 239f;
+  private static final float POPUP_HEIGHT = 95f;
   private static final float BADGE_TOP_OFFSET = 14;
   private static final float BADGE_LEFT_OFFSET = 14;
+  private static final int BADGE_WIDTH = 64;
+  private static final int BADGE_HEIGHT = 64;
   private static final float TEXT_TOP_OFFSET = 54;
   private static final float TEXT_LEFT_OFFSET = 88;
+  private static final int TEXT_HEIGHT = 12;
   private static final Logger LOGGER = LogManager.getLogger(CustomAchievementRenderer.class);
 
   private static List<AbstractGameEffect> achievementsToRender = new ArrayList<>();
@@ -44,69 +49,6 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
     BaseMod.subscribe(this);
   }
 
-  public static void addAchievementToRenderQueue(AchievementItem achievement) {
-    if (font == null) {
-      initializeFont();
-    }
-    if (mySpriteBatch == null) {
-       mySpriteBatch = new SpriteBatch();
-    }
-
-    queuePopupForRendering(achievement);
-  }
-
-  private static void queuePopupForRendering(AchievementItem achievement) {
-    Texture achievementPopup = ImageMaster.loadImage("img/achievements/achievementpopup.png");
-    float popupW = achievementPopup.getWidth();
-    float popupH = achievementPopup.getHeight();
-    achievementsToRender.add(getAchievementPopupElement(popupW, popupH, achievementPopup, 0, 0));
-
-    TextureAtlas.AtlasRegion achievementBadge = ReflectionHacks.getPrivate(achievement, AchievementItem.class, "img");
-    if (achievementBadge != null) {
-      FrameBuffer fb = new FrameBuffer(Pixmap.Format.RGBA8888, 64, 64, false);
-      achievementBadge.flip(false, true);
-      fb.begin();
-      Gdx.gl.glClearColor(0.0F, 0.0F, 0.0F, 0.0F);
-      Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
-      Gdx.gl.glColorMask(true, true, true, true);
-      OrthographicCamera og = new OrthographicCamera(64, 64);
-      mySpriteBatch.setProjectionMatrix(og.combined);
-      mySpriteBatch.begin();
-      mySpriteBatch.draw(achievementBadge, -32, -32, 64, 64);
-      mySpriteBatch.end();
-      fb.end();
-      achievementBadge.flip(false, true);
-      TextureRegion textureRegion = new TextureRegion(fb.getColorBufferTexture(), 0, 0);
-      achievementsToRender.add(
-          getAchievementPopupElement(popupW, popupH, textureRegion.getTexture(), BADGE_LEFT_OFFSET,
-              BADGE_TOP_OFFSET));
-    }
-    else {
-      LOGGER.error("Achievement icon not found of achievement %s", achievement.key);
-    }
-
-    FrameBuffer fb = new FrameBuffer(Pixmap.Format.RGBA8888, (int) (popupW - TEXT_LEFT_OFFSET), 12, false);
-    TextureRegion texture = new TextureRegion(fb.getColorBufferTexture());
-    texture.flip(false, true);
-    fb.begin();
-    Gdx.gl.glClearColor(0.0F, 0.0F, 0.0F, 0.0F);
-    Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
-    Gdx.gl.glColorMask(true, true, true, true);
-    OrthographicCamera og = new OrthographicCamera((popupW - TEXT_LEFT_OFFSET), 12);
-    mySpriteBatch.setProjectionMatrix(og.combined);
-    mySpriteBatch.begin();
-    String title = ReflectionHacks.getPrivate(achievement, AchievementItem.class, "title");
-    FontHelper.renderFont(mySpriteBatch, font, title, -(popupW - TEXT_LEFT_OFFSET)/2, -6, Color.RED);
-    mySpriteBatch.end();
-    fb.end();
-    texture.flip(false, true);
-    achievementsToRender.add(getAchievementPopupElement(popupW, popupH, texture.getTexture(), TEXT_LEFT_OFFSET, TEXT_TOP_OFFSET));
-  }
-
-  private static void initializeFont() {
-    font = FontHelper.cardTypeFont;
-  }
-
   @Override
   public void receivePostRender(SpriteBatch sb) {
     achievementsToRender.forEach(it -> it.render(sb));
@@ -114,17 +56,99 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
     achievementsToRender.removeIf(it -> it.isDone);
   }
 
-  private static AbstractGameEffect getAchievementPopupElement(float popupW, float popupH, Texture texture,
-      float popupLeftOffset, float popupTopOffset) {
+  public static void addAchievementToRenderQueue(AchievementItem achievement) {
+    if (font == null) {
+      initializeFont();
+    }
+    if (mySpriteBatch == null) {
+      mySpriteBatch = new SpriteBatch();
+    }
+
+    queuePopupForRendering();
+    queueBadgeForRendering(achievement);
+    queueTitleForRendering(achievement);
+  }
+
+  private static void initializeFont() {
+    font = FontHelper.cardTypeFont;
+  }
+
+  private static void queuePopupForRendering() {
+    Texture achievementPopup = ImageMaster.loadImage("img/achievements/achievementpopup.png");
+    achievementsToRender.add(getAchievementPopupElement(achievementPopup, 0, 0));
+  }
+
+  private static void queueBadgeForRendering(AchievementItem achievement) {
+    TextureAtlas.AtlasRegion achievementBadge = ReflectionHacks.getPrivate(achievement, AchievementItem.class, "img");
+    if (achievementBadge != null) {
+
+      achievementBadge.flip(false, true);
+
+      FrameBuffer fb = createFrameBuffer(BADGE_WIDTH, BADGE_HEIGHT);
+      onFrameBuffer(fb, frameBuffer ->
+          onSpriteBatch(mySpriteBatch, BADGE_WIDTH, BADGE_HEIGHT, sb ->
+              sb.draw(achievementBadge, -BADGE_WIDTH / 2f, -BADGE_HEIGHT / 2f, BADGE_WIDTH, BADGE_HEIGHT)));
+
+      achievementsToRender.add(
+          getAchievementPopupElement(getTextureFromFrameBuffer(fb), BADGE_LEFT_OFFSET, BADGE_TOP_OFFSET));
+    }
+    else {
+      LOGGER.error("Achievement icon not found of achievement %s", achievement.key);
+    }
+  }
+
+  private static void queueTitleForRendering(AchievementItem achievement) {
+    String title = ReflectionHacks.getPrivate(achievement, AchievementItem.class, "title");
+
+    FrameBuffer fb = createFrameBuffer((int) (POPUP_WIDTH - TEXT_LEFT_OFFSET), TEXT_HEIGHT);
+    onFrameBuffer(fb, frameBuffer ->
+        onSpriteBatch(mySpriteBatch, (int) (POPUP_WIDTH - TEXT_LEFT_OFFSET), TEXT_HEIGHT, sb ->
+//            FontHelper.renderFont(mySpriteBatch, font, title, -(POPUP_WIDTH - TEXT_LEFT_OFFSET) / 2, -TEXT_HEIGHT / 2f,
+            FontHelper.renderFont(mySpriteBatch, font, title, 0, 0,
+                Color.RED)));
+
+    achievementsToRender.add(
+        getAchievementPopupElement(getTextureFromFrameBuffer(fb), TEXT_LEFT_OFFSET, TEXT_TOP_OFFSET));
+  }
+
+  private static FrameBuffer createFrameBuffer(int width, int height) {
+    return new FrameBuffer(Pixmap.Format.RGBA8888, width, height, false);
+  }
+
+  private static void onFrameBuffer(FrameBuffer fb, Consumer<FrameBuffer> block) {
+    fb.begin();
+    Gdx.gl.glClearColor(0.0F, 0.0F, 0.0F, 0.0F);
+    Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+    Gdx.gl.glColorMask(true, true, true, true);
+    block.accept(fb);
+    fb.end();
+  }
+
+  private static void onSpriteBatch(SpriteBatch sb, int viewportWidth, int viewportHeight,
+      Consumer<SpriteBatch> block) {
+    OrthographicCamera og = new OrthographicCamera(viewportWidth, viewportHeight);
+    mySpriteBatch.setProjectionMatrix(og.combined);
+    mySpriteBatch.begin();
+    block.accept(sb);
+    mySpriteBatch.end();
+  }
+
+  private static Texture getTextureFromFrameBuffer(FrameBuffer fb) {
+    TextureRegion textureRegion = new TextureRegion(fb.getColorBufferTexture(), 0, 0);
+    return textureRegion.getTexture();
+  }
+
+  private static AbstractGameEffect getAchievementPopupElement(Texture texture, float popupLeftOffset,
+      float popupTopOffset) {
     float elementW = texture.getWidth();
     float elementH = texture.getHeight();
-    return new VfxBuilder(texture, Settings.WIDTH - popupW + popupLeftOffset + elementW / 2,
+    return new VfxBuilder(texture, Settings.WIDTH - POPUP_WIDTH + popupLeftOffset + elementW / 2,
         0 - popupTopOffset - elementH / 2, MOVE_DURATION)
         .setScale(1 / Settings.scale)
-        .moveY(0 - popupTopOffset - elementH / 2, 0 + popupH - popupTopOffset - elementH / 2)
+        .moveY(0 - popupTopOffset - elementH / 2, 0 + POPUP_HEIGHT - popupTopOffset - elementH / 2)
         .andThen(SHOW_DURATION)
         .andThen(MOVE_DURATION)
-        .moveY(0 + popupH - popupTopOffset - elementH / 2, 0 - popupTopOffset - elementH / 2)
+        .moveY(0 + POPUP_HEIGHT - popupTopOffset - elementH / 2, 0 - popupTopOffset - elementH / 2)
         .build();
   }
 }
