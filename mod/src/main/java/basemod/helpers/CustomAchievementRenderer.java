@@ -127,7 +127,7 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
       );
     }
     else {
-      LOGGER.error("Achievement icon not found of achievement %s", achievement.key);
+      LOGGER.error("Achievement icon not found of achievement {}", achievement.key);
     }
   }
 
