@@ -12,7 +12,6 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.utils.Disposable;
 import com.megacrit.cardcrawl.core.Settings;
@@ -25,7 +24,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 public class CustomAchievementRenderer implements PostRenderSubscriber {
   private static final float MOVE_DURATION = .7f;
@@ -38,14 +36,15 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
   private static final int BADGE_HEIGHT = 64;
   private static final float TEXT_TOP_OFFSET = 54;
   private static final float TEXT_LEFT_OFFSET = 88;
+  private static final float TEXT_WIDTH = POPUP_WIDTH - TEXT_LEFT_OFFSET;
   private static final int TEXT_HEIGHT = 12;
   private static final Logger LOGGER = LogManager.getLogger(CustomAchievementRenderer.class);
 
-  private static List<GameEffectAndDisposable> achievementsToRenderWithAssociatedDisposable = new ArrayList<>();
+  private static final List<GameEffectAndDisposable> achievementsToRenderWithAssociatedDisposable = new ArrayList<>();
 
   private static class GameEffectAndDisposable {
-    private AbstractGameEffect gameEffect;
-    private Disposable disposable;
+    private final AbstractGameEffect gameEffect;
+    private final Disposable disposable;
 
     public GameEffectAndDisposable(AbstractGameEffect gameEffect, Disposable disposable) {
       this.gameEffect = gameEffect;
@@ -95,9 +94,16 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
 
   private static void queuePopupForRendering() {
     Texture achievementPopup = ImageMaster.loadImage("img/achievements/achievementpopup.png");
+    TextureAtlas.AtlasRegion atlasRegion = new TextureAtlas.AtlasRegion(
+        achievementPopup,
+        0,
+        0,
+        achievementPopup.getWidth(),
+        achievementPopup.getHeight());
+
     achievementsToRenderWithAssociatedDisposable.add(
         new GameEffectAndDisposable(
-            getAchievementPopupElement(achievementPopup, 0, 0),
+            getAchievementPopupElement(atlasRegion, 0, 0),
             achievementPopup
         )
     );
@@ -107,18 +113,15 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
     TextureAtlas.AtlasRegion achievementBadge = ReflectionHacks.getPrivate(achievement, AchievementItem.class, "img");
     if (achievementBadge != null) {
 
-      achievementBadge.flip(false, true);
-
       FrameBuffer fb = createFrameBuffer(BADGE_WIDTH, BADGE_HEIGHT);
-      onFrameBuffer(fb, frameBuffer ->
-          onSpriteBatch(myBadgeSpriteBatch, BADGE_WIDTH, BADGE_HEIGHT, sb ->
-              sb.draw(achievementBadge, -BADGE_WIDTH / 2f, -BADGE_HEIGHT / 2f, BADGE_WIDTH, BADGE_HEIGHT)));
-
-      achievementBadge.flip(false, true);
+      beginSpriteBatch(myBadgeSpriteBatch, BADGE_WIDTH, BADGE_HEIGHT);
+      myBadgeSpriteBatch.draw(achievementBadge, -BADGE_WIDTH / 2f, -BADGE_HEIGHT / 2f, BADGE_WIDTH, BADGE_HEIGHT);
+      myBadgeSpriteBatch.end();
+      fb.end();
 
       achievementsToRenderWithAssociatedDisposable.add(
           new GameEffectAndDisposable(
-              getAchievementPopupElement(getTextureFromFrameBuffer(fb), BADGE_LEFT_OFFSET, BADGE_TOP_OFFSET),
+              getAchievementPopupElement(getAtlasRegionFromFrameBuffer(fb), BADGE_LEFT_OFFSET, BADGE_TOP_OFFSET),
               fb
           )
       );
@@ -131,52 +134,50 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
   private static void queueTitleForRendering(AchievementItem achievement) {
     String title = ReflectionHacks.getPrivate(achievement, AchievementItem.class, "title");
 
-    FrameBuffer fb = createFrameBuffer((int) (POPUP_WIDTH - TEXT_LEFT_OFFSET), TEXT_HEIGHT);
-    onFrameBuffer(fb, frameBuffer ->
-        onSpriteBatch(myTitleSpriteBatch, (int) (POPUP_WIDTH - TEXT_LEFT_OFFSET), TEXT_HEIGHT, sb ->
-//            FontHelper.renderFont(mySpriteBatch, font, title, -(POPUP_WIDTH - TEXT_LEFT_OFFSET) / 2, -TEXT_HEIGHT / 2f,
-            FontHelper.renderFont(sb, font, title, -100, 0, Color.RED)));
+    FrameBuffer fb = createFrameBuffer((int) TEXT_WIDTH, TEXT_HEIGHT);
+    beginSpriteBatch(myTitleSpriteBatch, (int) TEXT_WIDTH, TEXT_HEIGHT);
+    // TODO TK: For some weird reason, the y is TEXT_HEIGHT more than I would expect to have to use. I would expect to
+    //  use -TEXT_HEIGHT/2, like the badge above, but then the text disappears.
+    FontHelper.renderFont(myTitleSpriteBatch, font, title, -TEXT_WIDTH / 2, TEXT_HEIGHT / 2f, new Color(0xCCCCCCFF));
+    myTitleSpriteBatch.end();
+    fb.end();
 
     achievementsToRenderWithAssociatedDisposable.add(
         new GameEffectAndDisposable(
-            getAchievementPopupElement(getTextureFromFrameBuffer(fb), TEXT_LEFT_OFFSET, TEXT_TOP_OFFSET),
+            getAchievementPopupElement(getAtlasRegionFromFrameBuffer(fb), TEXT_LEFT_OFFSET, TEXT_TOP_OFFSET),
             fb
         )
     );
   }
 
   private static FrameBuffer createFrameBuffer(int width, int height) {
-    return new FrameBuffer(Pixmap.Format.RGBA8888, width, height, false);
-  }
-
-  private static void onFrameBuffer(FrameBuffer fb, Consumer<FrameBuffer> block) {
-    fb.begin();
+    FrameBuffer frameBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, width, height, false);
+    frameBuffer.begin();
     Gdx.gl.glClearColor(0.0F, 0.0F, 0.0F, 0.0F);
     Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
     Gdx.gl.glColorMask(true, true, true, true);
-    block.accept(fb);
-    fb.end();
+    return frameBuffer;
   }
 
-  private static void onSpriteBatch(SpriteBatch sb, int viewportWidth, int viewportHeight, Consumer<SpriteBatch> block) {
+  private static void beginSpriteBatch(SpriteBatch sb, int viewportWidth, int viewportHeight) {
     OrthographicCamera og = new OrthographicCamera(viewportWidth, viewportHeight);
     sb.setProjectionMatrix(og.combined);
     sb.begin();
-    block.accept(sb);
-    sb.end();
   }
 
-  private static Texture getTextureFromFrameBuffer(FrameBuffer fb) {
-    TextureRegion textureRegion = new TextureRegion(fb.getColorBufferTexture(), 0, 0);
-    textureRegion.flip(false, true);
-    return textureRegion.getTexture();
+  private static TextureAtlas.AtlasRegion getAtlasRegionFromFrameBuffer(FrameBuffer fb) {
+    TextureAtlas.AtlasRegion atlasRegion = new TextureAtlas.AtlasRegion(fb.getColorBufferTexture(), 0, 0, fb.getWidth(),
+        fb.getHeight());
+    atlasRegion.flip(false, true);
+    return atlasRegion;
   }
 
-  private static AbstractGameEffect getAchievementPopupElement(Texture texture, float popupLeftOffset,
+  private static AbstractGameEffect getAchievementPopupElement(TextureAtlas.AtlasRegion atlasRegion,
+      float popupLeftOffset,
       float popupTopOffset) {
-    float elementW = texture.getWidth();
-    float elementH = texture.getHeight();
-    return new VfxBuilder(texture, Settings.WIDTH - POPUP_WIDTH + popupLeftOffset + elementW / 2,
+    float elementW = atlasRegion.getTexture().getWidth();
+    float elementH = atlasRegion.getTexture().getHeight();
+    return new VfxBuilder(atlasRegion, Settings.WIDTH - POPUP_WIDTH + popupLeftOffset + elementW / 2,
         0 - popupTopOffset - elementH / 2, MOVE_DURATION)
         .setScale(1 / Settings.scale)
         .moveY(0 - popupTopOffset - elementH / 2, 0 + POPUP_HEIGHT - popupTopOffset - elementH / 2)
