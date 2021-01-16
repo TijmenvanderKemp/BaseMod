@@ -2,8 +2,8 @@ package basemod.patches.com.megacrit.cardcrawl.unlock.UnlockTracker;
 
 import basemod.BaseMod;
 import basemod.abstracts.CustomAchievement;
+import basemod.helpers.CustomAchievementBorderTextureLoader;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.evacipated.cardcrawl.modthespire.lib.SpirePatch;
@@ -17,24 +17,16 @@ import com.megacrit.cardcrawl.screens.stats.AchievementItem;
     method = "render"
 )
 public class RenderBordersOverCustomAchievementInGrid {
-  private static TextureRegion unlockedBorder;
-  private static TextureRegion lockedBorder;
-
   /**
    * If the achievement is a custom one, automatically render the golden border if unlocked,
    * or the greyscale border with the lock if locked
    */
   public static void Postfix(AchievementGrid __instance, SpriteBatch ___sb, float ___renderY) {
-    if (unlockedBorder == null) {
-      unlockedBorder = new TextureRegion(ImageMaster.loadImage("img/achievements/achievementBorder.png"));
-    }
-    if (lockedBorder == null) {
-      lockedBorder = new TextureRegion(ImageMaster.loadImage("img/achievements/lockedBorder.png"));
-    }
+    CustomAchievementBorderTextureLoader.loadDefaultBorderTextures();
     for (int i = 0; i < __instance.items.size(); i++) {
       AchievementItem achievement = __instance.items.get(i);
       if (BaseMod.isModdedAchievement(achievement.key)) {
-        TextureRegion textureRegion = chooseTextureRegion(achievement);
+        TextureRegion textureRegion = CustomAchievementBorderTextureLoader.chooseTextureRegion(achievement);
         float zoomEffect = achievement.hb.hovered ? 1.1f : 1f;
         float spacing = 200 * Settings.scale;
         float x = 560.0F * Settings.scale + (i % 5) * spacing;
@@ -60,31 +52,6 @@ public class RenderBordersOverCustomAchievementInGrid {
             Settings.scale * zoomEffect,
             0.0F);
       }
-    }
-  }
-
-  /**
-   * If this is a base game achievement, or there is no custom border for the achievement set, return the preloaded
-   * border. Otherwise, load with the path that's set on the CustomAchievement.
-   */
-  private static TextureRegion chooseTextureRegion(AchievementItem achievement) {
-    if (achievement.isUnlocked) {
-      if (achievement instanceof CustomAchievement) {
-        CustomAchievement customAchievement = (CustomAchievement) achievement;
-        if (customAchievement.getCustomBorderPath() != null) {
-          return new TextureRegion(ImageMaster.loadImage(customAchievement.getCustomBorderPath()));
-        }
-      }
-      return unlockedBorder;
-    }
-    else {
-      if (achievement instanceof CustomAchievement) {
-        CustomAchievement customAchievement = (CustomAchievement) achievement;
-        if (customAchievement.getCustomLockedBorderPath() != null) {
-          return new TextureRegion(ImageMaster.loadImage(customAchievement.getCustomLockedBorderPath()));
-        }
-      }
-      return lockedBorder;
     }
   }
 }

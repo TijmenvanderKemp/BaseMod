@@ -26,7 +26,9 @@ public class CustomAchievementUnlocker {
     LOGGER.info("Achievement Unlocked: {}", key);
     UnlockTracker.achievementPref.flush();
 
-    CustomAchievementPopupRenderer.addAchievementToRenderQueue(achievements.get(key));
+    AchievementItem achievement = achievements.get(key);
+    achievement.isUnlocked = true;
+    CustomAchievementPopupRenderer.addAchievementToRenderQueue(achievement);
   }
 
   public static void register(AchievementItem achievement) {

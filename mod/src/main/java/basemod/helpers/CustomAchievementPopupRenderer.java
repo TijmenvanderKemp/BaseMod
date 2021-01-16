@@ -3,6 +3,7 @@ package basemod.helpers;
 import basemod.BaseMod;
 import basemod.ReflectionHacks;
 import basemod.interfaces.PostRenderSubscriber;
+import basemod.patches.com.megacrit.cardcrawl.unlock.UnlockTracker.RenderBordersOverCustomAchievementInGrid;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
@@ -13,6 +14,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.utils.Disposable;
 import com.megacrit.cardcrawl.core.CardCrawlGame;
@@ -55,8 +57,7 @@ public class CustomAchievementPopupRenderer implements PostRenderSubscriber {
     }
   }
 
-  private static SpriteBatch myBadgeSpriteBatch;
-  private static SpriteBatch myTitleSpriteBatch;
+  private static SpriteBatch mySpriteBatch;
   private static BitmapFont font;
 
   public CustomAchievementPopupRenderer() {
@@ -79,15 +80,13 @@ public class CustomAchievementPopupRenderer implements PostRenderSubscriber {
     if (font == null) {
       initializeFont();
     }
-    if (myBadgeSpriteBatch == null) {
-      myBadgeSpriteBatch = new SpriteBatch();
-    }
-    if (myTitleSpriteBatch == null) {
-      myTitleSpriteBatch = new SpriteBatch();
+    if (mySpriteBatch == null) {
+      mySpriteBatch = new SpriteBatch();
     }
 
     queuePopupForRendering();
     queueBadgeForRendering(achievement);
+    queueBadgeBorderForRendering(achievement);
     queueTextForRendering(achievement);
   }
 
@@ -122,9 +121,32 @@ public class CustomAchievementPopupRenderer implements PostRenderSubscriber {
     if (achievementBadge != null) {
 
       FrameBuffer fb = createFrameBuffer(BADGE_WIDTH, BADGE_HEIGHT);
-      beginSpriteBatch(myBadgeSpriteBatch, BADGE_WIDTH, BADGE_HEIGHT);
-      myBadgeSpriteBatch.draw(achievementBadge, -BADGE_WIDTH / 2f, -BADGE_HEIGHT / 2f, BADGE_WIDTH, BADGE_HEIGHT);
-      myBadgeSpriteBatch.end();
+      beginSpriteBatch(mySpriteBatch, BADGE_WIDTH, BADGE_HEIGHT);
+      mySpriteBatch.draw(achievementBadge, -BADGE_WIDTH / 2f, -BADGE_HEIGHT / 2f, BADGE_WIDTH, BADGE_HEIGHT);
+      mySpriteBatch.end();
+      fb.end();
+
+      achievementsToRenderWithAssociatedDisposable.add(
+          new GameEffectAndDisposable(
+              getAchievementPopupElement(getAtlasRegionFromFrameBuffer(fb), BADGE_LEFT_OFFSET, BADGE_TOP_OFFSET),
+              fb
+          )
+      );
+    }
+    else {
+      LOGGER.error("Achievement icon not found of achievement {}", achievement.key);
+    }
+  }
+
+  private static void queueBadgeBorderForRendering(AchievementItem achievement) {
+    CustomAchievementBorderTextureLoader.loadDefaultBorderTextures();
+    TextureRegion achievementBadgeBorder = CustomAchievementBorderTextureLoader.chooseTextureRegion(achievement);
+    if (achievementBadgeBorder != null) {
+
+      FrameBuffer fb = createFrameBuffer(BADGE_WIDTH, BADGE_HEIGHT);
+      beginSpriteBatch(mySpriteBatch, BADGE_WIDTH, BADGE_HEIGHT);
+      mySpriteBatch.draw(achievementBadgeBorder, -BADGE_WIDTH / 2f, -BADGE_HEIGHT / 2f, BADGE_WIDTH, BADGE_HEIGHT);
+      mySpriteBatch.end();
       fb.end();
 
       achievementsToRenderWithAssociatedDisposable.add(
@@ -145,12 +167,12 @@ public class CustomAchievementPopupRenderer implements PostRenderSubscriber {
     String text = uiStrings.TEXT[0] + " NL NL " + title;
 
     FrameBuffer fb = createFrameBuffer((int) TEXT_WIDTH, TEXT_HEIGHT);
-    beginSpriteBatch(myTitleSpriteBatch, (int) TEXT_WIDTH, TEXT_HEIGHT);
+    beginSpriteBatch(mySpriteBatch, (int) TEXT_WIDTH, TEXT_HEIGHT);
     // TODO TK: For some weird reason, the y is TEXT_HEIGHT more than I would expect to have to use. I would expect to
     //  use -TEXT_HEIGHT/2, like the badge above, but then the text disappears.
-    FontHelper.renderSmartText(myTitleSpriteBatch, font, text, -TEXT_WIDTH / 2, TEXT_HEIGHT / 2f, TEXT_WIDTH,
+    FontHelper.renderSmartText(mySpriteBatch, font, text, -TEXT_WIDTH / 2, TEXT_HEIGHT / 2f, TEXT_WIDTH,
         font.getLineHeight() * 1.2f, new Color(0xCCCCCCFF));
-    myTitleSpriteBatch.end();
+    mySpriteBatch.end();
     fb.end();
 
     achievementsToRenderWithAssociatedDisposable.add(
