@@ -41,9 +41,14 @@ public class RenderBordersOverCustomAchievementInGrid {
         // Integer division is on purpose here, we're trying to figure out on which row of 5 achievements this belongs
         float y = ___renderY - (i / 5) * spacing + 680.0F * Settings.yScale;
 
-        // Fixes an issue where it blended the border and the achievement badge together, it had something to do with
-        // the alpha of the color in the spritebatch.
-        ___sb.setColor(new Color(0.8f, 0.8f, 0.8f, 1.0f));
+        if (achievement.isUnlocked) {
+          ___sb.setColor(Color.WHITE.cpy());
+        }
+        else {
+          // Fixes an issue where it blended the border and the achievement badge together, it had something to do with
+          // the alpha of the color in the spritebatch.
+          ___sb.setColor(new Color(0.8f, 0.8f, 0.8f, 1.0f));
+        }
         ___sb.draw(textureRegion,
             x - textureRegion.getRegionWidth() / 2.0F,
             y - textureRegion.getRegionHeight() / 2.0F,
