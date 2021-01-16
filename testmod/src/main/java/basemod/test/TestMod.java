@@ -8,6 +8,7 @@ import basemod.abstracts.CustomSavable;
 import basemod.helpers.AchievementJSON;
 import basemod.interfaces.*;
 import basemod.test.achievements.StrikeAchievement;
+import basemod.test.achievements.StrikeAchievementCustomBorder;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -452,5 +453,6 @@ public class TestMod implements
 	@Override
 	public void receiveEditAchievements() {
 		BaseMod.addAchievement(new StrikeAchievement());
+		BaseMod.addAchievement(new StrikeAchievementCustomBorder());
 	}
 }

@@ -3,6 +3,7 @@ package basemod.test;
 import basemod.abstracts.CustomCard;
 import basemod.devcommands.unlock.Unlock;
 import basemod.test.achievements.StrikeAchievement;
+import basemod.test.achievements.StrikeAchievementCustomBorder;
 import com.megacrit.cardcrawl.actions.common.GainBlockAction;
 import com.megacrit.cardcrawl.cards.AbstractCard;
 import com.megacrit.cardcrawl.characters.AbstractPlayer;
@@ -30,6 +31,7 @@ public class Defend_Purple extends CustomCard {
 
 	public void use(AbstractPlayer p, AbstractMonster m) {
 		UnlockTracker.achievementPref.putBoolean(StrikeAchievement.ID, false);
+		UnlockTracker.achievementPref.putBoolean(StrikeAchievementCustomBorder.ID, false);
 		UnlockTracker.achievementPref.flush();
 		if (com.megacrit.cardcrawl.core.Settings.isDebug) {
 			AbstractDungeon.actionManager.addToBottom(new GainBlockAction(p, p, 50));

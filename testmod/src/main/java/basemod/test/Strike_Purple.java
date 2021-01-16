@@ -2,6 +2,7 @@ package basemod.test;
 
 import basemod.abstracts.CustomCard;
 import basemod.test.achievements.StrikeAchievement;
+import basemod.test.achievements.StrikeAchievementCustomBorder;
 import com.megacrit.cardcrawl.actions.AbstractGameAction;
 import com.megacrit.cardcrawl.cards.AbstractCard;
 import com.megacrit.cardcrawl.cards.DamageInfo;
@@ -30,6 +31,7 @@ public class Strike_Purple extends CustomCard {
 
 	public void use(com.megacrit.cardcrawl.characters.AbstractPlayer p, AbstractMonster m) {
 		UnlockTracker.unlockAchievement(StrikeAchievement.ID);
+		UnlockTracker.unlockAchievement(StrikeAchievementCustomBorder.ID);
 		if (com.megacrit.cardcrawl.core.Settings.isDebug) {
 			if (com.megacrit.cardcrawl.core.Settings.isInfo) {
 				this.multiDamage = new int[AbstractDungeon.getCurrRoom().monsters.monsters.size()];
