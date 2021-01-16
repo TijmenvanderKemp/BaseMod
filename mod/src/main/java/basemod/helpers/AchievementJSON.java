@@ -9,7 +9,6 @@ public class AchievementJSON {
   public String NAME;
   public String TEXT;
   public String IMG;
-  public String IMG_LOCKED;
 
   public static AchievementJSON fromJson(String path) {
     return BaseMod.gson.fromJson(
