@@ -3,7 +3,7 @@ package basemod;
 import basemod.abstracts.*;
 import basemod.eventUtil.AddEventParams;
 import basemod.eventUtil.EventUtils;
-import basemod.helpers.CustomAchievementRenderer;
+import basemod.helpers.CustomAchievementPopupRenderer;
 import basemod.helpers.CustomAchievementUnlocker;
 import basemod.helpers.RelicType;
 import basemod.helpers.dynamicvariables.BlockVariable;
@@ -262,7 +262,7 @@ public class BaseMod {
 	public static final String save_path = "saves" + File.separator;
 
 	public static DevConsole console;
-	public static CustomAchievementRenderer customAchievementRenderer;
+	public static CustomAchievementPopupRenderer customAchievementPopupRenderer;
 	public static Gson gson;
 	public static boolean modSettingsUp = false;
 
@@ -390,7 +390,7 @@ public class BaseMod {
 		config = makeConfig();
 		setProperties();
 		console = new DevConsole();
-		customAchievementRenderer = new CustomAchievementRenderer();
+		customAchievementPopupRenderer = new CustomAchievementPopupRenderer();
 	}
 
 	// setupAnimationGfx -

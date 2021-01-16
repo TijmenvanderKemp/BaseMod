@@ -28,7 +28,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CustomAchievementRenderer implements PostRenderSubscriber {
+public class CustomAchievementPopupRenderer implements PostRenderSubscriber {
   private static final float MOVE_DURATION = .7f;
   private static final float SHOW_DURATION = 6f;
   private static final float POPUP_WIDTH = 239f;
@@ -41,7 +41,7 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
   private static final float TEXT_LEFT_OFFSET = 88;
   private static final float TEXT_WIDTH = POPUP_WIDTH - TEXT_LEFT_OFFSET;
   private static final int TEXT_HEIGHT = 40;
-  private static final Logger LOGGER = LogManager.getLogger(CustomAchievementRenderer.class);
+  private static final Logger LOGGER = LogManager.getLogger(CustomAchievementPopupRenderer.class);
 
   private static final List<GameEffectAndDisposable> achievementsToRenderWithAssociatedDisposable = new ArrayList<>();
 
@@ -59,7 +59,7 @@ public class CustomAchievementRenderer implements PostRenderSubscriber {
   private static SpriteBatch myTitleSpriteBatch;
   private static BitmapFont font;
 
-  public CustomAchievementRenderer() {
+  public CustomAchievementPopupRenderer() {
     BaseMod.subscribe(this);
   }
 
