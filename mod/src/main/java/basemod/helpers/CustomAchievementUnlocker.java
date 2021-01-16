@@ -18,12 +18,12 @@ public class CustomAchievementUnlocker {
       return;
     }
     if (!BaseMod.isModdedAchievement(key)) {
-      LOGGER.info(String.format("This is not a modded achievement, ignoring it in %s",
-          CustomAchievementUnlocker.class.getSimpleName()));
+      LOGGER.info("{} is not a modded achievement, ignoring it in {}",
+          key, CustomAchievementUnlocker.class.getSimpleName());
       return;
     }
     UnlockTracker.achievementPref.putBoolean(key, true);
-    LOGGER.info(String.format("Achievement Unlocked: %s", key));
+    LOGGER.info("Achievement Unlocked: {}", key);
     UnlockTracker.achievementPref.flush();
 
     CustomAchievementPopupRenderer.addAchievementToRenderQueue(achievements.get(key));
